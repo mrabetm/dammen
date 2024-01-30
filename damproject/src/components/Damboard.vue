@@ -3,33 +3,39 @@
         <div class="grid-container">
             <div v-for="tile in damboard" :key="tile.id" :class="['grid-cell', tileColor(tile.id)]"
                 @click="checkerActions(tile)">
-                <div v-if="tile.hasChecker" class="checker" :style="{ backgroundColor: tile.checkerColor }"></div>
+                <div v-if="tile.hasChecker" class="checker" :class="{ selected: isSelectedChecker(tile) }"
+                    :style="{ backgroundColor: tile.checkerColor }"></div>
             </div>
+        </div>
+        <div class="status-box">
+            <h2>{{ this.currentPlayer.name + ' is aan de beurt' }} - {{ 'team ' + this.currentPlayer.team }}</h2>
+            <h3>Scores: {{ 'Team ' + this.player_1.team + ' score is ' + this.player_1.score }} - {{ 'Team ' + this.player_2.team + ' score is ' + this.player_2.score }}</h3>
         </div>
     </v-container>
 </template>
 <script>
+import Statistics from "@/components/Statistics.vue";
+
 export default {
+    components: { Statistics },
     data() {
         return {
             damboard: this.initDamBoard(),
             selectedChecker: null,
             gridSize: 10,
             maxScore: 20,
-            player_1: {
-                id: 1,
-                name: "Player 1",
-                team: "white",
-                score: 0,
-            },
-            player_2: {
-                id: 2,
-                name: "Player 2",
-                team: "black",
-                score: 0,
-            },
             currentPlayer: null,
         };
+    },
+    props: {
+        player_1: {
+            type: Object,
+            required: true,
+        },
+        player_2: {
+            type: Object,
+            required: true,
+        }
     },
     created() {
         this.currentPlayer = this.player_1;
@@ -41,8 +47,13 @@ export default {
                 this.currentPlayer = this.currentPlayer.id === this.player_1.id ? this.player_2 : this.player_1;
             } else {
                 alert(this.currentPlayer.name + 'has won the game');
+                //resetknop
             }
         },
+        /**
+         * Generate an array of 10*10 (tiles) objects.
+         * Each tile contains an ID, hasChecker Property and checkerColor property
+         */
         initDamBoard() {
             this.gridSize = 10
             return Array.from({ length: this.gridSize * this.gridSize }, (_, index) => ({
@@ -51,14 +62,23 @@ export default {
                 checkerColor: this.isTileWithChecker(index + 1) ? this.checkerColor(index + 1) : ""
             }))
         },
+        /**
+         * This method checks a tile has a checker
+         * It will return true when tileId falls within the first or last 4 rows and when the tile has the color wood-brown
+         * @param {*} tileId 
+         */
         isTileWithChecker(tileId) {
             this.gridSize = 10
             const row = Math.ceil(tileId / this.gridSize)
             const isInFirstOrLastFourRows = row <= 4 || row > this.gridSize - 4;
-            const isCheckerCell = this.tileColor(tileId) === 'wood-brown';
+            const isCheckerTile = this.tileColor(tileId) === 'wood-brown';
 
-            return isInFirstOrLastFourRows && isCheckerCell;
+            return isInFirstOrLastFourRows && isCheckerTile;
         },
+        /**
+         * This method determines the color of the checkers based on which side of the board they are.
+         * @param {*} tileId 
+         */
         checkerColor(tileId) {
             if (Math.ceil(tileId / this.gridSize) <= 4) {
                 return 'white'
@@ -66,23 +86,42 @@ export default {
                 return 'black'
             }
         },
+        /**
+         * Return the tile color based of the tileId
+         * Return 0 for an even number 'wood-brown' or 1 odd for a 'marble-white' tile
+         * @param {*} tileId 
+         */
         tileColor(tileId) {
             return (tileId + Math.floor((tileId - 1) / this.gridSize)) % 2 === 0 ? 'wood-brown' : 'marble-white';
         },
 
+        /**
+         * Helper method to check whether tile has the same checker as this.selectedChecker
+         * @param {} tile 
+         */
+        isSelectedChecker(tile) {
+            return this.selectedChecker && this.selectedChecker.id === tile.id;
+        },
         //The below methods are methods used for gamelogic
+        /**
+         * Main method for handeling checkerActions which describes multiple scenario's in which the game can be played out
+         * Route 1: Checker is able to be captured resulting in this being the only move till its performed
+         * Route 2: Normal Directional Movement
+         * 
+         * Switches players when the action is completed and unselects this.selectedChecker.
+         * 
+         */
         checkerActions(tile) {
             const potentialCaptures = this.checkForAvailableCaptures();
-            const maxScore = 20;
-            if(potentialCaptures.length > 0){
-                if(tile.hasChecker && tile.checkerColor === this.currentPlayer.team){
+            if (potentialCaptures.length > 0) {
+                if (tile.hasChecker && tile.checkerColor === this.currentPlayer.team) {
                     const checkerCaptures = potentialCaptures.filter(capture => capture.fromTile === tile.id)
-                    if(checkerCaptures.length > 0){
+                    if (checkerCaptures.length > 0) {
                         this.selectedChecker = tile;
                     }
-                } else if (this.selectedChecker){
+                } else if (this.selectedChecker) {
                     const captureMove = potentialCaptures.find(capture => capture.fromTile === this.selectedChecker.id && capture.toTile === tile.id)
-                    if(captureMove){
+                    if (captureMove) {
                         this.moveChecker(this.selectedChecker, this.damboard.find(t => t.id === tile.id))
                         this.switchPlayer();
                         this.selectedChecker = null;
@@ -102,15 +141,19 @@ export default {
             }
 
         },
+        /**
+         * This method checks whether a capturePlay can be performed.
+         * returns the potentialCaptures array
+         */
         checkForAvailableCaptures() {
             const potentialCaptures = [];
             this.damboard.forEach(tile => {
-                if(tile.hasChecker && tile.checkerColor === this.currentPlayer.team){
+                if (tile.hasChecker && tile.checkerColor === this.currentPlayer.team) {
                     const allowedMoves = [];
                     this.determineAllowedMoves(tile, allowedMoves);
                     allowedMoves.forEach(move => {
-                        if(this.isCaptureMove(tile.id, move)){
-                            potentialCaptures.push({fromTile: tile.id, toTile: move});
+                        if (this.isCaptureMove(tile.id, move)) {
+                            potentialCaptures.push({ fromTile: tile.id, toTile: move });
                         }
                     })
                 }
@@ -118,7 +161,7 @@ export default {
             return potentialCaptures;
         },
         /**
-         * This function checks whether a move is valid based off
+         * This function checks whether a move is valid based off fromTile and toTile
          * @param {*} fromTile 
          * @param {*} toTile 
          * 
@@ -135,13 +178,18 @@ export default {
             return allowedMoves.includes(toTile.id)
         },
 
+        /**
+         * This method determines the directional movements the checker is able to perform
+         * If a checker is black it can only move up, if a checker is white it can only move downwards.
+         * @param {*} fromTile 
+         * @param {*} allowedMoves 
+         */
         determineAllowedMoves(fromTile, allowedMoves) {
             const upperRight = fromTile.id - (this.gridSize - 1);
             const upperLeft = fromTile.id - (this.gridSize + 1);
             const lowerLeft = fromTile.id + (this.gridSize - 1);
             const lowerRight = fromTile.id + (this.gridSize + 1);
 
-            //conditions when the currently selected tile has a black checker
             if (fromTile.checkerColor === "black") {
                 this.checkIfDirectionalMovementIsValid(fromTile, upperRight, -9, allowedMoves)
                 this.checkIfDirectionalMovementIsValid(fromTile, upperLeft, -11, allowedMoves)
@@ -150,7 +198,12 @@ export default {
                 this.checkIfDirectionalMovementIsValid(fromTile, lowerLeft, 9, allowedMoves)
             }
         },
-
+        /**
+         * This method determines whether a checker can be removed from the board.
+         * If the the checker can be captured than it will be removed and a score will be added to the currentPlayer
+         * @param {*} fromTileId 
+         * @param {*} toTileId 
+         */
         removeChecker(fromTileId, toTileId) {
             const canBeCaptured = this.isCaptureMove(fromTileId, toTileId);
             if (canBeCaptured) {
@@ -164,6 +217,11 @@ export default {
             }
         },
 
+        /**
+         * This method implements the movement logic of a checker and checks whether that move is a capturemove
+         * @param {*} fromTile 
+         * @param {*} toTile 
+         */
         moveChecker(fromTile, toTile) {
             toTile.hasChecker = true;
             toTile.checkerColor = fromTile.checkerColor;
@@ -177,29 +235,50 @@ export default {
                 this.removeChecker(fromTile.id, toTile.id);
             }
         },
-
+        /**
+         * Helper method that returns a tile which contains a checker that can be captured
+         * @param {*} fromTileId 
+         * @param {*} toTileId 
+         */
         getCapturedTileId(fromTileId, toTileId) {
             return Math.floor((fromTileId + toTileId) / 2);
         },
-
+        /**
+         * Helper method that determines whether a move is a capture move
+         * @param {*} fromTileId 
+         * @param {*} toTileId 
+         */
         isCaptureMove(fromTileId, toTileId) {
             const moveDifference = Math.abs(fromTileId - toTileId);
             return moveDifference === 18 || moveDifference === 22
         },
-
+        /**
+         * Helper method that checks whether a tile has a checker
+         * @param {*} tileId 
+         */
         tileHasChecker(tileId) {
             const tile = this.damboard.find(tile => tile.id === tileId);
             return tile && tile.hasChecker;
         },
-
+        /**
+         * This method determines whether a checker can be moved inside the board.
+         * Route 1: It checks whether a checker is on an cornerTile, if it is than the current checker cannot move to that location
+         * Route 2: It checks whether a checker close to the current one is from the opposite team, if it is then determine whether there is space to move behind that
+         * checker.
+         * Route 3: It makes normal movement to an empty tile
+         * 
+         * @param {*} fromTile 
+         * @param {*} toTile 
+         * @param {*} jump 
+         * @param {*} allowedMoves 
+         */
         checkIfDirectionalMovementIsValid(fromTile, toTilePos, jump, allowedMoves) {
-            // Define the corner tiles
             const cornerTiles = [1, 10, 11, 20, 21, 30, 31, 40, 41, 50, 51, 60, 61, 70, 71, 80, 81, 90, 91, 100];
-            // Check if the targetTile is a corner tile and occupied
+
             if (cornerTiles.includes(toTilePos)) {
                 const targetTile = this.damboard.find(tile => tile.id === toTilePos);
                 if (targetTile && targetTile.hasChecker) {
-                    return; // Do not add to allowed moves if the corner tile is occupied
+                    return; 
                 }
             }
             const toTile = this.damboard.find(tile => tile.id === toTilePos);
@@ -255,5 +334,9 @@ export default {
 
 .black {
     background-color: black;
+}
+
+.selected {
+    border: 2px solid blue;
 }
 </style>
