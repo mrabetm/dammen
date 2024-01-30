@@ -74,16 +74,6 @@ export default {
         checkerActions(tile) {
             const potentialCaptures = this.checkForAvailableCaptures();
             const maxScore = 20;
-            // if (captureAvailable) {
-            //     if (tile.hasChecker && tile.checkerColor === this.currentPlayer.team) {
-            //         this.selectedChecker = tile;
-            //         if (this.selectedChecker && this.isValidMove(this.selectedChecker, this.hitTile)) {
-            //             this.moveChecker(this.selectedChecker, this.hitTile);
-            //             this.switchPlayer();
-            //             this.selectedChecker = null;
-            //         }
-            //     }
-            // }
             if(potentialCaptures.length > 0){
                 if(tile.hasChecker && tile.checkerColor === this.currentPlayer.team){
                     const checkerCaptures = potentialCaptures.filter(capture => capture.fromTile === tile.id)
@@ -100,7 +90,6 @@ export default {
                 }
             }
             else {
-                // Normal play without mandatory captures
                 if (tile.hasChecker && !this.selectedChecker && tile.checkerColor === this.currentPlayer.team) {
                     this.selectedChecker = tile;
                 } else if (this.selectedChecker && this.isValidMove(this.selectedChecker, tile)) {
@@ -114,21 +103,6 @@ export default {
 
         },
         checkForAvailableCaptures() {
-            // const playerCheckers = this.damboard.filter(tile => tile.checkerColor === this.currentPlayer.team && tile.hasChecker);
-            // for (const checker of playerCheckers) {
-            //     const allowedMoves = [];
-            //     this.determineAllowedMoves(checker, allowedMoves);
-            //     const captureMoves = allowedMoves.filter(move => this.isCaptureMove(checker.id, move));
-            //     if (captureMoves.length > 0 && captureMoves.length === 1) {
-            //         this.hitTile = this.damboard.find(tile => tile.id === captureMoves[0])
-            //         return true; // Capture available
-            //     } else if (captureMoves.length > 1) {
-            //         this.hitTile
-            //         return true;
-            //     }
-            // }
-            // return false; // No captures available
-
             const potentialCaptures = [];
             this.damboard.forEach(tile => {
                 if(tile.hasChecker && tile.checkerColor === this.currentPlayer.team){
@@ -178,7 +152,6 @@ export default {
         },
 
         removeChecker(fromTileId, toTileId) {
-            // console.log("coordinates are", fromTileId, toTileId)
             const canBeCaptured = this.isCaptureMove(fromTileId, toTileId);
             if (canBeCaptured) {
                 const capturedTileId = this.getCapturedTileId(fromTileId, toTileId);
