@@ -1,7 +1,7 @@
 <template>
     <v-container fluid>
         <div class="grid-container">
-            <div v-for="tile in damboard" :key="tile.id" :class="['grid-cell', tileColor(tile.id)]"
+            <div v-for="tile in damboard" :key="tile.id" :class="['grid-tile', tileColor(tile.id)]"
                 @click="checkerActions(tile)">
                 <div v-if="tile.hasChecker" class="checker" :class="{ selected: isSelectedChecker(tile) }"
                     :style="{ backgroundColor: tile.checkerColor }"></div>
@@ -307,7 +307,7 @@ export default {
     gap: 2px;
 }
 
-.grid-cell {
+.grid-tile {
     width: 100%;
     height: 100%;
 }
